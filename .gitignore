@@ -1,2 +1,7 @@
 ﻿.idea
 pw/branches/r1117/Bin/logs
+
+# Built/copied client binaries in Bin (reproducible from pw_publish/ or by rebuild) — not versioned
+pw/branches/r1117/Bin/*
+!pw/branches/r1117/Bin/config.txt
+!pw/branches/r1117/Bin/pw_game_lang.ini
