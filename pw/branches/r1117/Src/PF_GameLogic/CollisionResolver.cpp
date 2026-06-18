@@ -187,6 +187,18 @@ void CollisionResolver::Resolve( const vector<PFBaseMovingUnit*> units, float ti
            // unit->moveState == MOVE_STATE_MOUNTED      || // ... - skipped by MovingUnitsCollector
 					( unit->GetGhostMode() != 0 ) )                // "ghosts" are not collided
       {
+        // A ghost wedged in a no-path / blocked state (typically: ghost mode switched on
+        // while the unit was already stuck) is otherwise skipped by the blocked-unit path
+        // recovery below and stays frozen forever -- IsMoving() keeps returning true while
+        // the unit never advances. Recover it here so it resumes moving (ghost mode lets it
+        // path through dynamic units); if no route exists at all, release it to idle.
+        if ( unit->GetGhostMode() != 0 && unit->IsColliding() && unit->moveState != MOVE_STATE_MOUNTED )
+        {
+          if ( unit->RecomputePath() )
+            unit->SetState( MOVE_STATE_MOVING );
+          else
+            unit->Stop();
+        }
         continue;
       }
 
