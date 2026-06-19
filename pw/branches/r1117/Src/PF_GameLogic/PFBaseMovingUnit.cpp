@@ -355,6 +355,9 @@ bool MovingUnit::BypassPoint(CVec2 const& point, int pointSize, float maxOverhea
 
 void MovingUnit::SetState(EMoveState newState, float timeout)
 {
+	if ( pOwner && pOwner->IsTrueHero() && moveState != newState )
+		DebugTrace("DBGMS SetState %d -> %d  ghost=%d", (int)moveState, (int)newState, GetGhostMode());
+
 	if (newState == MOVE_STATE_START_MOVING ||
 			newState == MOVE_STATE_START_BYPASSING ||
 			newState == MOVE_STATE_MOVING ||
@@ -690,7 +693,7 @@ bool MovingUnit::CreatePath( bool needReversePath )
   SVector start = pMap->GetTile(origin);
   SVector end   = pMap->GetTile(vFarTarget);
 
-  // Смотрим прямой путь
+  // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ
   pStaticPath = CreateStaticPath( start, end );
   if ( !pStaticPath )
   {
@@ -700,7 +703,7 @@ bool MovingUnit::CreatePath( bool needReversePath )
   
   CVec2 reverseTarget = pMap->GetPointByTile( start );
 
-  // Если хотим более качественно найти путь ( для героев ), то смотрим и обратный путь
+  // пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ ( пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ ), пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ
   CObj<CCommonStaticPath> pStaticPathReverse;
   if ( needReversePath )
   {
@@ -709,7 +712,7 @@ bool MovingUnit::CreatePath( bool needReversePath )
     {
       pChecking = new RangeChecking( reverseTarget, pOwner, stopDistance );
     }
-    // Ищем путь от конца уже найденного пути
+    // пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ
     pStaticPathReverse = CreateStaticPath( pStaticPath->GetFinishTile(), start );
 
     if ( pChecking )
@@ -718,19 +721,19 @@ bool MovingUnit::CreatePath( bool needReversePath )
     }
   }
 
-  // Ничего не нашли - выходим
+  // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ - пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
   if ( !pStaticPath && !pStaticPathReverse )
   {
     Stop();
     return false;
   }
-  // Нашли только обратный путь - применяем его
+  // пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ
   else if ( !pStaticPath && pStaticPathReverse )
   {
     pStaticPath = pStaticPathReverse;
     pStaticPath->ReversePath();
   }
-  // Нашли оба - смотрим тот, который короче
+  // пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ - пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
   else if ( pStaticPath && pStaticPathReverse )
   {
     if ( pStaticPath->GetLength() > pStaticPathReverse->GetLength() )
@@ -1228,6 +1231,9 @@ void MovingUnit::Stop( bool notifyClient /* = true */ )
   if ( moveState == MOVE_STATE_MOUNTED )
     return;
 
+  if ( pOwner && pOwner->IsTrueHero() && moveState != MOVE_STATE_IDLE )
+    DebugTrace("DBGMS MovingUnit::Stop ENTRY state=%d ghost=%d notify=%d", (int)moveState, GetGhostMode(), (int)notifyClient);
+
 	pPath       = NULL;
 	pStaticPath = NULL;
 	pBlocker    = NULL;
@@ -1391,10 +1397,10 @@ void MovingUnit::TickMove(float timeDelta)
           }
         }
       } func( vShortTarget );
-      // суть этой страшной конструкции в том, что func передаётся по ссылке а не по значению
+      // пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅ, пїЅпїЅпїЅ func пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
       nstl::for_each<nstl::vector<Protection::HiddenVar<CVec2, 30>::T>::iterator,NearestPoint&>( splineTiles.begin(), splineTiles.end(), func ); 
 
-      if( func.nearestPathPoint == origin ) // это значит что скорости слишком мало, чтобы перейти в другой тайл. Кейз маловероятный
+      if( func.nearestPathPoint == origin ) // пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ. пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
       {
         Stop();
         break;
@@ -1433,17 +1439,34 @@ void MovingUnit::TickMove(float timeDelta)
 	MarkTiles();
 
 	// update client unit
+	const bool dbgMSHero = pOwner->IsTrueHero();
+	// A ghost unit can briefly land in a colliding / no-path state during the tick; it is
+	// recovered back to MOVING later in this same step (see MovingUnitStep ghost-recover).
+	// Suppress these stop notifications for ghosts so the move animation stays continuous
+	// instead of flickering a one-frame idle/stop. A genuine ghost stop (arrival) goes
+	// through SetState(IDLE) -> client OnStop, not through here.
+	const bool ghostKeepAnim = ( GetGhostMode() != 0 );
 	if ( fabs(origin - prevPos) > 0.01f )		// is position changed inside loop above?
+	{
+		if ( dbgMSHero ) DebugTrace("DBGMS TickMove ADVANCED state=%d ghost=%d", (int)moveState, GetGhostMode());
 		NotifyClientMove();
-	else
+	}
+	else if ( !ghostKeepAnim )
+	{
+		if ( dbgMSHero ) DebugTrace("DBGMS TickMove(A) DID-NOT-ADVANCE -> NotifyClientStop  state=%d ghost=%d", (int)moveState, GetGhostMode());
 		NotifyClientStop();
+	}
 
 	// stop animation for static states
-	if (moveState != MOVE_STATE_MOVING &&
+	if (!ghostKeepAnim &&
+			moveState != MOVE_STATE_MOVING &&
 			moveState != MOVE_STATE_BYPASSING &&
 			moveState != MOVE_STATE_START_BYPASSING &&
 			moveState != MOVE_STATE_BLOCKED) // NUM_TASK: this state is static, but we don't want to stop move animation
+	{
+		if ( dbgMSHero ) DebugTrace("DBGMS TickMove(B) STATIC-STATE -> NotifyClientStop  state=%d ghost=%d", (int)moveState, GetGhostMode());
 		NotifyClientStop();
+	}
 }
 
 
@@ -1614,6 +1637,25 @@ void MovingUnit::MovingUnitStep(float timeDelta)
       }
       else
       {
+        // Keep ghosts seamlessly moving. A ghost unit stuck/transient in a colliding or
+        // no-path state is skipped by the collision resolver; recover it HERE, BEFORE
+        // TickMove, and recompute its path so TickMove advances on the fresh path the SAME
+        // tick instead of losing a tick (a one-frame micro-stop, e.g. when a new move click
+        // re-paths a ghosting hero, or the frame ghost mode switches on). Ghost mode paths
+        // through dynamic units, so a route normally exists; if it genuinely cannot reach the
+        // target, stop instead of staying falsely "moving".
+        if ( GetGhostMode() != 0 && IsColliding() )
+        {
+          const int dbgPrev = (int)moveState;
+          const bool dbgRecomp = RecomputePath();
+          if ( dbgRecomp )
+            SetState( MOVE_STATE_MOVING );
+          else
+            Stop();
+          if ( pOwner->IsTrueHero() )
+            DebugTrace("DBGMS ghost-recover(pre): wasState=%d recompute=%d -> newState=%d", dbgPrev, (int)dbgRecomp, (int)moveState);
+        }
+
         // perform movement
         if ( moveState != MOVE_STATE_IDLE )
         {
@@ -1622,6 +1664,31 @@ void MovingUnit::MovingUnitStep(float timeDelta)
       }
     }
   }
+
+  // Safety net: if TickMove itself left the ghost in a colliding / no-path state this tick,
+  // recover it here too so it never stays frozen across steps (the pre-TickMove recover
+  // above handles a unit already stuck at the start of the step). Ghost mode lets the unit
+  // path through dynamic units, so a route normally exists; if it genuinely cannot reach the
+  // target, stop instead of staying falsely "moving".
+  if ( GetGhostMode() != 0 && IsColliding() && moveState != MOVE_STATE_MOUNTED )
+  {
+    const int dbgPrev = (int)moveState;
+    const bool dbgRecomp = RecomputePath();
+    if ( dbgRecomp )
+      SetState( MOVE_STATE_MOVING );
+    else
+      Stop();
+    if ( pOwner->IsTrueHero() )
+      DebugTrace("DBGMS ghost-recover(post): wasState=%d recompute=%d -> newState=%d", dbgPrev, (int)dbgRecomp, (int)moveState);
+  }
+
+  if ( pOwner->IsTrueHero() && ( IsMoving() || GetGhostMode() != 0 ) )
+  {
+    const CVec2 dbgPos = pOwner->GetPosition().AsVec2D();
+    DebugTrace("DBGMS Step END: state=%d ghost=%d movedThisStep=%d pos=(%.1f,%.1f)",
+      (int)moveState, GetGhostMode(), (int)( fabs( origin - prevPos ) > 0.01f ), dbgPos.x, dbgPos.y);
+  }
+
 	// tick state time
 	stateTime += timeDelta;
 	

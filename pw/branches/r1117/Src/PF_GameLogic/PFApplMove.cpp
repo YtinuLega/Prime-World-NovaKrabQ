@@ -492,7 +492,7 @@ namespace NWorld
 
     if ( pTargetUnit != pOwner && pTargetUnit->GetMasterUnit() != pOwner )
     {
-      // Стремное место, тут просто Pop'ается стейт без OnLeave. Постоянный источник багов :( Подпирается кастомными if'ами
+      // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ Pop'пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ OnLeave. пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ :( пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ if'пїЅпїЅпїЅ
       lastTargetState = pTargetUnit->PopState();
       lastTargetTarget = pTargetUnit->GetCurrentTarget();
       pTargetUnit->DropTarget();
@@ -1191,7 +1191,7 @@ namespace NWorld
       return false;
     }
 
-    // Если на момент применения аппликатора цель - союзник, то считаем, что мы можем атаковать союзника.
+    // пїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ - пїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.
     const bool canAttackAlly = pReceiver->GetFaction() == pTarget2Attack->GetFaction();
 
     if ( (pReceiver->IsIdle() || pReceiver->GetCurrentTarget() != pTarget2Attack) && pReceiver->CanAttackTarget( pTarget2Attack, canAttackAlly ) )
@@ -1409,6 +1409,14 @@ namespace NWorld
 
     if (!pMovingUnit->IsDead())
     {
+      // The push/teleport below repositions the unit (to shove out units it passed
+      // through while ghosting) and, as a side effect, calls Stop() -> the unit goes
+      // IDLE for one tick. If it was moving, that shows as a one-frame "micro-stop".
+      // Remember the active move order and re-issue it right after, so movement stays
+      // seamless when ghost mode ends or refreshes (e.g. recasting the speed skill).
+      const bool wasMoving = pMovingUnit->IsMoving() && !pMovingUnit->IsMovingSpecial();
+      const CVec2 savedDest = pMovingUnit->GetDestination();
+
       if ( GetDB().pushUnits )
       {
         pMovingUnit->PlaceUnitWithPush( pMovingUnit->GetPosition().AsVec2D(), pMovingUnit->GetObjectSize(), true, false );
@@ -1416,7 +1424,12 @@ namespace NWorld
       else
       {
         pMovingUnit->TeleportTo( pMovingUnit->GetPosition().AsVec2D(), true, false );
-      } 
+      }
+
+      if ( wasMoving )
+      {
+        pMovingUnit->MoveTo( savedDest );
+      }
     }
     Base::Stop();
   }

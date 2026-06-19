@@ -176,6 +176,7 @@ namespace NWorld
       // don't stop hero being moved special
       if ( !hero->IsMovingSpecial() )
       {
+        if ( hero->IsTrueHero() ) DebugTrace("DBGMS WHOSTOP UseAbility@invalidTarget/forbidmove");
         hero->Stop();
       }
       return true;
@@ -280,6 +281,7 @@ namespace NWorld
       // don't stop hero being moved special
       if ( !hero->IsMovingSpecial() )
       {
+        if ( hero->IsTrueHero() ) DebugTrace("DBGMS WHOSTOP UseAbility@invalidTarget/forbidmove");
         hero->Stop();
       }
       return true;
@@ -299,6 +301,7 @@ namespace NWorld
       bool isTargetVisible = !target.IsUnit() || target.GetUnit()->IsVisibleForFaction( hero->GetFaction() );
       if ( !canUseTalent )
       {
+        if ( hero->IsTrueHero() ) DebugTrace("DBGMS WHOSTOP UseTalent@cannotUseTalent");
         hero->Stop();
         return true;
       }
@@ -315,6 +318,7 @@ namespace NWorld
       {
         if ( hero->IsMoving() && !hero->IsMovingSpecial() )
         {
+          if ( hero->IsTrueHero() ) DebugTrace("DBGMS WHOSTOP UseTalent@supposedToStop talentValid=%d", (int)IsValid(talent));
           hero->Stop();
         }
       }
@@ -715,13 +719,13 @@ namespace NWorld
       pOwner->EventHappened( PFBaseUnitEvent( NDb::BASEUNITEVENT_CHANNELINGCANCELED ) );
   }
 
-  // Есть в PFBaseUseState
+  // пїЅпїЅпїЅпїЅ пїЅ PFBaseUseState
   bool PFInteractObjectState::IsActionFinished() const
   {
     return pActionInstance ? pActionInstance->IsActivated() && !pOwner->IsInChannelling() : true;
   }
 
-  // Нужно?
+  // пїЅпїЅпїЅпїЅпїЅ?
   bool PFInteractObjectState::CanBeInterrupted() const
   {
     if ( pActionInstance )

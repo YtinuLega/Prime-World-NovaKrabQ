@@ -221,11 +221,14 @@ void PFClientBaseMovingUnit::OnMoveTo( const CVec2& newpos, bool animate )
   if ( !isMove )
   {
     isMove = true;
+    if ( WorldObject() && WorldObject()->IsTrueHero() ) DebugTrace("DBGMS CLIENT OnMoveTo: was STOPPED -> OnStartMoving (re-start anim) dir=(%.2f,%.2f)", dir.x, dir.y);
     OnStartMoving( animate );
   }
+  else if ( WorldObject() && WorldObject()->IsTrueHero() )
+    DebugTrace("DBGMS CLIENT OnMoveTo: continue dir=(%.2f,%.2f)", dir.x, dir.y);
 
   destination = CVec3( newpos, 0.0f );
-  //TODO Проблема в задаче NUM_TASK
+  //TODO пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ NUM_TASK
   //float rawSpeed = WorldObject() ? WorldObject()->GetUnitSpeed() : 10.0f;
   float rawSpeed = 10.0f;
   speed       = rawSpeed * fabs( dir );
@@ -443,6 +446,10 @@ void PFClientBaseMovingUnit::UpdateMovement( const float timeDiff )
   const bool needRotate  = fabs( angleDelta  ) > EPS_VALUE;
   bool needRotateZ = fabs( angleDeltaZ ) > EPS_VALUE;
 
+  if ( ( isMove || needRotate ) && WorldObject() && WorldObject()->IsTrueHero() )
+    DebugTrace("DBGMS CLIENT UpdateMove: isMove=%d canStop=%d stopPending=%d speed=%.2f needRotate=%d angleDelta(rad)=%.2f",
+      (int)isMove, (int)canStop, (int)isStopPending, speed, (int)needRotate, angleDelta);
+
   if ( needRotate )
   {
     float toRotate  = rotSpeed * timeDiff;
@@ -593,6 +600,7 @@ void PFClientBaseMovingUnit::UpdateMovement( const float timeDiff )
   // stop animation when needed
   if ( isStopPending && canStop )
   {
+    if ( WorldObject() && WorldObject()->IsTrueHero() ) DebugTrace("DBGMS CLIENT OnStopped() FIRES -> idle anim (speed=%.2f)", speed);
     isMove      = isStopPending = false;
     destination = newposrot.pos;
     OnStopped();
@@ -675,6 +683,7 @@ void PFClientBaseMovingUnit::OnHide(bool hide)
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void PFClientBaseMovingUnit::OnStop()
 {
+  if ( WorldObject() && WorldObject()->IsTrueHero() ) DebugTrace("DBGMS CLIENT OnStop: isMove=%d (-> isStopPending)", (int)isMove);
   isStopPending = isMove;
 }
 
