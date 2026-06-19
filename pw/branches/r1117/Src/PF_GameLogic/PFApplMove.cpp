@@ -1409,6 +1409,14 @@ namespace NWorld
 
     if (!pMovingUnit->IsDead())
     {
+      // The push/teleport below repositions the unit (to shove out units it passed
+      // through while ghosting) and, as a side effect, calls Stop() -> the unit goes
+      // IDLE for one tick. If it was moving, that shows as a one-frame "micro-stop".
+      // Remember the active move order and re-issue it right after, so movement stays
+      // seamless when ghost mode ends or refreshes (e.g. recasting the speed skill).
+      const bool wasMoving = pMovingUnit->IsMoving() && !pMovingUnit->IsMovingSpecial();
+      const CVec2 savedDest = pMovingUnit->GetDestination();
+
       if ( GetDB().pushUnits )
       {
         pMovingUnit->PlaceUnitWithPush( pMovingUnit->GetPosition().AsVec2D(), pMovingUnit->GetObjectSize(), true, false );
@@ -1417,6 +1425,11 @@ namespace NWorld
       {
         pMovingUnit->TeleportTo( pMovingUnit->GetPosition().AsVec2D(), true, false );
       } 
+
+      if ( wasMoving )
+      {
+        pMovingUnit->MoveTo( savedDest );
+      }
     }
     Base::Stop();
   }

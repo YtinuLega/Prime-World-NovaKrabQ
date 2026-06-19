@@ -1432,14 +1432,19 @@ void MovingUnit::TickMove(float timeDelta)
 	// update tile map
 	MarkTiles();
 
-	// update client unit
+	// update client unit. A ghost unit recovers a colliding / no-path state back to MOVING
+	// in the same step (see MovingUnitStep ghost-recover), so suppress its stop notifications
+	// here to keep the move animation continuous instead of flickering a one-frame idle/stop.
+	// A genuine ghost stop (arrival) goes through SetState(IDLE) -> client OnStop, not here.
+	const bool ghostKeepAnim = ( GetGhostMode() != 0 );
 	if ( fabs(origin - prevPos) > 0.01f )		// is position changed inside loop above?
 		NotifyClientMove();
-	else
+	else if ( !ghostKeepAnim )
 		NotifyClientStop();
 
 	// stop animation for static states
-	if (moveState != MOVE_STATE_MOVING &&
+	if (!ghostKeepAnim &&
+			moveState != MOVE_STATE_MOVING &&
 			moveState != MOVE_STATE_BYPASSING &&
 			moveState != MOVE_STATE_START_BYPASSING &&
 			moveState != MOVE_STATE_BLOCKED) // NUM_TASK: this state is static, but we don't want to stop move animation
@@ -1614,6 +1619,21 @@ void MovingUnit::MovingUnitStep(float timeDelta)
       }
       else
       {
+        // Keep ghosts seamlessly moving. A ghost unit stuck/transient in a colliding or
+        // no-path state is skipped by the collision resolver; recover it HERE, BEFORE
+        // TickMove, and recompute its path so TickMove advances on the fresh path the SAME
+        // tick instead of losing a tick (a one-frame micro-stop, e.g. when a new move click
+        // re-paths a ghosting hero, or the frame ghost mode switches on). Ghost mode paths
+        // through dynamic units, so a route normally exists; if it genuinely cannot reach the
+        // target, stop instead of staying falsely "moving".
+        if ( GetGhostMode() != 0 && IsColliding() )
+        {
+          if ( RecomputePath() )
+            SetState( MOVE_STATE_MOVING );
+          else
+            Stop();
+        }
+
         // perform movement
         if ( moveState != MOVE_STATE_IDLE )
         {
@@ -1622,6 +1642,20 @@ void MovingUnit::MovingUnitStep(float timeDelta)
       }
     }
   }
+
+  // Safety net: if TickMove itself left the ghost in a colliding / no-path state this tick,
+  // recover it here too so it never stays frozen across steps (the pre-TickMove recover
+  // above handles a unit already stuck at the start of the step). Ghost mode lets the unit
+  // path through dynamic units, so a route normally exists; if it genuinely cannot reach the
+  // target, stop instead of staying falsely "moving".
+  if ( GetGhostMode() != 0 && IsColliding() && moveState != MOVE_STATE_MOUNTED )
+  {
+    if ( RecomputePath() )
+      SetState( MOVE_STATE_MOVING );
+    else
+      Stop();
+  }
+
 	// tick state time
 	stateTime += timeDelta;
 	
