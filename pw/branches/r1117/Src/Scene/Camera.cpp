@@ -48,6 +48,14 @@ void SCameraPosition::ConvertFromRadToDeg()
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Widescreen FOV correction is capped at this aspect: screens wider than the cap
+// keep the capped vertical FOV and gain horizontal view instead (Hor+, Dota-like).
+// Set to 100 to restore the old unbounded correction (vertical FOV shrinks with width).
+// Lower bound is 16:9 so the var can never WIDEN the vertical FOV beyond stock on
+// standard monitors (values below the real aspect would act as a vertical-FOV cheat).
+static float s_aspectCap = 16.0f / 9.0f;
+REGISTER_VAR_PRED( "gfx_aspect_cap", s_aspectCap, STORAGE_USER, NGlobal::MakeMinMaxVerifyPred( 16.0f / 9.0f, 100.0f ) );
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 CCamera::CCamera()
 {
 	fFOV = 32.0f;
@@ -93,6 +101,8 @@ void CCamera::Update()
   // FOV aspect correction
   float A0 = 4.f / 3.f; // base aspect
   float A1 = fScreenWidth / fScreenHeight; // current aspect
+  if ( A1 > s_aspectCap )
+    A1 = s_aspectCap;
   float tgA = tan( ToRadian( fFovCorrectionAngle ) );
   float tgFov0 = tanf( ToRadian( fFOV / 2 ) );
   float Fov1 = atanf( tgFov0 * ( 1.f + A0 * tgA ) / ( 1.f + A1 * tgA ) );

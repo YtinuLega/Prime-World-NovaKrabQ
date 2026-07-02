@@ -14,6 +14,16 @@ namespace UI
 static Point g_uiScreenResolution( 0, 0 );
 static Point g_screenResolution( 0, 0 );
 
+// User UI scale: the virtual UI resolution is divided by this, so values > 1
+// render the whole interface proportionally larger. The editor path must stay
+// at the stock 1280x1024 space, so the scale is applied only for the game.
+// Upper bound 1.25: above it the virtual height drops below the tallest authored
+// centered dialogs (~835 of 1024) and their edges/buttons start to clip.
+static float s_uiScale = 1.0f;
+static float g_appliedUiScale = 1.0f;
+static bool g_editorMode = false;
+REGISTER_VAR_PRED( "ui_scale", s_uiScale, STORAGE_USER, NGlobal::MakeMinMaxVerifyPred( 0.5f, 1.25f ) );
+
 
 void UpdateScreenResolution( const int width, const int height, const bool editor )
 {
@@ -28,6 +38,17 @@ void UpdateScreenResolution( const int width, const int height, const bool edito
 	else
 		g_uiScreenResolution.y = height * UI_RESOLUTION_WIDTH / width;
 
+	g_editorMode = editor;
+	if ( !editor )
+	{
+		g_appliedUiScale = s_uiScale;
+		if ( s_uiScale != 1.0f )
+		{
+			g_uiScreenResolution.x = (int)( g_uiScreenResolution.x / s_uiScale + 0.5f );
+			g_uiScreenResolution.y = (int)( g_uiScreenResolution.y / s_uiScale + 0.5f );
+		}
+	}
+
 	if ( !editor )
 		Render::GetUIRenderer()->SetResolutionCoefs( 2.0f / g_uiScreenResolution.x, 2.0f / g_uiScreenResolution.y,
                               static_cast<float>(g_screenResolution.x) / static_cast<float>(g_uiScreenResolution.x),
@@ -41,6 +62,18 @@ void UpdateScreenResolution( const int width, const int height, const bool edito
                               static_cast<float>(g_screenResolution.x) / static_cast<float>(g_uiScreenResolution.x),
                               static_cast<float>(g_screenResolution.y) / static_cast<float>(g_uiScreenResolution.y) );
 	}
+}
+
+
+
+void RefreshUIScaleIfChanged()
+{
+	if ( g_editorMode || g_appliedUiScale == s_uiScale )
+		return;
+	if ( g_screenResolution.x <= 0 || g_screenResolution.y <= 0 )
+		return;
+
+	UpdateScreenResolution( g_screenResolution.x, g_screenResolution.y, false );
 }
 
 

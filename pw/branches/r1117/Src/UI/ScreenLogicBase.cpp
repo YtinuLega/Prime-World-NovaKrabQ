@@ -477,13 +477,19 @@ void ScreenLogicBase::CheckResolution()
   if ( !pBaseWindow )
     return;
 
+  RefreshUIScaleIfChanged();
+
   const Point & screenResolution = UI::GetScreenResolution();
   const Point & uiResolution = UI::GetUIScreenResolution();
 
   bool resEqual = ( fabs( screenResolution.x - resolution.x ) < FLT_EPSILON ) &&
-                  ( fabs( screenResolution.y - resolution.y ) < FLT_EPSILON ); 
+                  ( fabs( screenResolution.y - resolution.y ) < FLT_EPSILON );
 
-  if ( resEqual || fabs( screenResolution.x ) < FLT_EPSILON || fabs( screenResolution.y ) < FLT_EPSILON )
+  // ui_scale can change the virtual resolution while the physical one stays the same
+  bool uiResEqual = ( fabs( pBaseWindow->GetSize().x - uiResolution.x ) < 0.5f ) &&
+                    ( fabs( pBaseWindow->GetSize().y - uiResolution.y ) < 0.5f );
+
+  if ( ( resEqual && uiResEqual ) || fabs( screenResolution.x ) < FLT_EPSILON || fabs( screenResolution.y ) < FLT_EPSILON )
     return;
 
   resolution = screenResolution;

@@ -35,6 +35,10 @@ namespace ESnapOptions
 
 void UpdateScreenResolution( const int width, const int height, const bool editor );
 
+// Re-applies the virtual UI resolution when the ui_scale var has changed since
+// the last UpdateScreenResolution call. No-op in editor mode.
+void RefreshUIScaleIfChanged();
+
 
 const Point& GetUIScreenResolution();
 const Point& GetScreenResolution();
