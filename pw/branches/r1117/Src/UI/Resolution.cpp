@@ -15,14 +15,29 @@ static Point g_uiScreenResolution( 0, 0 );
 static Point g_screenResolution( 0, 0 );
 
 // User UI scale: the virtual UI resolution is divided by this, so values > 1
-// render the whole interface proportionally larger. The editor path must stay
-// at the stock 1280x1024 space, so the scale is applied only for the game.
+// render the whole interface proportionally larger.
+// 0 (the default) = auto: stock 1.0 on 16:9 and narrower, growing with the
+// monitor aspect up to 1.25 on 32:9, so ultrawide players get a comfortable
+// HUD out of the box without touching any settings. Values 0.5..1.25 pin the
+// scale manually. The editor path always stays at the stock 1280x1024 space.
 // Upper bound 1.25: above it the virtual height drops below the tallest authored
 // centered dialogs (~835 of 1024) and their edges/buttons start to clip.
-static float s_uiScale = 1.0f;
-static float g_appliedUiScale = 1.0f;
+static float s_uiScale = 0.0f;
+static float g_appliedUiScale = 0.0f;
 static bool g_editorMode = false;
-REGISTER_VAR_PRED( "ui_scale", s_uiScale, STORAGE_USER, NGlobal::MakeMinMaxVerifyPred( 0.5f, 1.25f ) );
+
+// Accepts 0 (= auto) or a fixed scale in [0.5 .. 1.25]
+struct UiScaleVerifyPred : NGlobal::StdVerifyPred<float>
+{
+	bool operator()( const NGlobal::VariantValue &val ) const
+	{
+		if ( !NGlobal::StdVerifyPred<float>::operator()( val ) )
+			return false;
+		const float v = val.Get<float>();
+		return v == 0.0f || ( v >= 0.5f && v <= 1.25f );
+	}
+};
+REGISTER_VAR_PRED( "ui_scale", s_uiScale, STORAGE_USER, UiScaleVerifyPred() );
 
 
 void UpdateScreenResolution( const int width, const int height, const bool editor )
@@ -42,10 +57,23 @@ void UpdateScreenResolution( const int width, const int height, const bool edito
 	if ( !editor )
 	{
 		g_appliedUiScale = s_uiScale;
-		if ( s_uiScale != 1.0f )
+		float scale = s_uiScale;
+		if ( scale == 0.0f )
 		{
-			g_uiScreenResolution.x = (int)( g_uiScreenResolution.x / s_uiScale + 0.5f );
-			g_uiScreenResolution.y = (int)( g_uiScreenResolution.y / s_uiScale + 0.5f );
+			// auto: comfort scale from the monitor aspect - stock 1.0 at 16:9 and
+			// narrower, growing with the relative width surplus up to 1.25 at 32:9
+			const float baseAspect = 16.0f / 9.0f;
+			const float aspect = (float)width / (float)height;
+			scale = aspect <= baseAspect ? 1.0f : 1.0f + 0.25f * ( aspect / baseAspect - 1.0f );
+			if ( scale > 1.25f )
+				scale = 1.25f;
+			if ( scale < 1.01f ) // snap near-16:9 panels (1366x768 etc.) to stock
+				scale = 1.0f;
+		}
+		if ( scale != 1.0f )
+		{
+			g_uiScreenResolution.x = (int)( g_uiScreenResolution.x / scale + 0.5f );
+			g_uiScreenResolution.y = (int)( g_uiScreenResolution.y / scale + 0.5f );
 		}
 	}
 
